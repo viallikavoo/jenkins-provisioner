@@ -1,0 +1,10 @@
+services:
+    image: "jenkins-master:latest"
+    container_name: "jenkins-master"
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_data:/var/jenkins_home
+
+

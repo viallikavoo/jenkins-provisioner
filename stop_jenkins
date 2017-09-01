@@ -1,0 +1,4 @@
+#!/bin/sh
+docker-compose down
+#docker stop jenkins-master
+#docker rm jenkins-master

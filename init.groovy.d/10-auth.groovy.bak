@@ -1,0 +1,74 @@
+def env = System.getenv()
+
+if (!env['GITHUB_CLIENTID'?.trim()] || !env['GITHUB_CLIENTSECRET']?.trim()) {
+    println 'ERROR: No github env vars defined, skipping the config'
+    System.exit(1)
+}
+
+import jenkins.model.*
+
+println 'Modifying GitHub Oauth settings'
+
+import hudson.security.SecurityRealm
+import hudson.security.AuthorizationStrategy
+import org.jenkinsci.plugins.GithubSecurityRealm
+import org.jenkinsci.plugins.GithubAuthorizationStrategy
+
+// Step 1
+
+String githubWebUri = 'https://github.com'
+String githubApiUri = 'https://api.github.com'
+String clientID = env['GITHUB_CLIENTID']
+String clientSecret = env['GITHUB_CLIENTSECRET']
+String oauthScopes = 'read:org,user:email'
+SecurityRealm github_realm = new GithubSecurityRealm(githubWebUri, githubApiUri, clientID, clientSecret, oauthScopes)
+
+// check for equality, no need to modify the runtime if no settings changed
+if (!github_realm.equals(Jenkins.instance.getSecurityRealm())) {
+    Jenkins.instance.setSecurityRealm(github_realm)
+    Jenkins.instance.save()
+}
+
+// Step 2
+
+// permissions are ordered similar to web UI
+// Admin User Names, comma separated values
+String adminUserNames = ''
+if (env['JENKINS_ADMIN_USERNAMES'?.trim()]) {
+    adminUserNames = env['JENKINS_ADMIN_USERNAMES']
+} else {
+    println 'ERROR: No JENKINS_ADMIN_USERNAMES env var defined'
+    System.exit(2)
+}
+// Participant in Organization
+String organizationNames = 'mobilelife'
+// Use Github repository permissions
+boolean useRepositoryPermissions = true
+// Grant READ permissions to all Authenticated Users
+boolean authenticatedUserReadPermission = true
+// Grant CREATE Job permissions to all Authenticated Users
+boolean authenticatedUserCreateJobPermission = false
+// Grant READ permissions for /github-webhook
+boolean allowGithubWebHookPermission = false
+// Grant READ permissions for /cc.xml
+boolean allowCcTrayPermission = false
+// Grant READ permissions for Anonymous Users
+boolean allowAnonymousReadPermission = false
+// Grant ViewStatus permissions for Anonymous Users
+boolean allowAnonymousJobStatusPermission = false
+
+AuthorizationStrategy github_authorization = new GithubAuthorizationStrategy(adminUserNames,
+    authenticatedUserReadPermission,
+    useRepositoryPermissions,
+    authenticatedUserCreateJobPermission,
+    organizationNames,
+    allowGithubWebHookPermission,
+    allowCcTrayPermission,
+    allowAnonymousReadPermission,
+    allowAnonymousJobStatusPermission)
+
+// check for equality, no need to modify the runtime if no settings changed
+if (!github_authorization.equals(Jenkins.instance.getAuthorizationStrategy())) {
+    Jenkins.instance.setAuthorizationStrategy(github_authorization)
+    Jenkins.instance.save()
+}
